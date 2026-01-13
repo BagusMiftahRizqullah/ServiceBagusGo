@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionType {
+  free
+  monthly
+  yearly
+}
+
+model User {
+  id                      String           @id @default(uuid())
+  phone_number            String           @unique
+  password                String
+  trial_start_date        DateTime?
+  trial_end_date          DateTime?
+  subscription_type       SubscriptionType @default(free)
+  subscription_start_date DateTime?
+  subscription_end_date   DateTime?
+  created_at              DateTime         @default(now())
+  updated_at              DateTime         @updatedAt
+
+  @@index([phone_number])
+}
+
