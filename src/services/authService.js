@@ -4,7 +4,7 @@ const { addDays } = require('../utils/dates')
 const { normalizePhoneNumber } = require('../utils/phone')
 const { signAccessToken } = require('../utils/jwt')
 
-async function register({ phone_number, password }) {
+async function register({ phone_number, password, name }) {
   const phone = normalizePhoneNumber(phone_number)
   if (!phone) {
     const err = new Error('phone_number is required')
@@ -31,6 +31,7 @@ async function register({ phone_number, password }) {
   const user = await prisma.user.create({
     data: {
       phone_number: phone,
+      name: name || null,
       password: hashed,
       trial_start_date: now,
       trial_end_date: trialEnd,
@@ -39,6 +40,7 @@ async function register({ phone_number, password }) {
     select: {
       id: true,
       phone_number: true,
+      name: true,
       trial_start_date: true,
       trial_end_date: true,
       subscription_type: true,
@@ -97,4 +99,3 @@ async function login({ phone_number, password }) {
 }
 
 module.exports = { register, login }
-

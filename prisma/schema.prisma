@@ -16,6 +16,7 @@ enum SubscriptionType {
 model User {
   id                      String           @id @default(uuid())
   phone_number            String           @unique
+  name                    String?
   password                String
   trial_start_date        DateTime?
   trial_end_date          DateTime?
@@ -27,4 +28,3 @@ model User {
 
   @@index([phone_number])
 }
-
