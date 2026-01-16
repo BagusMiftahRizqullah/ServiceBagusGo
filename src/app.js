@@ -19,8 +19,8 @@ app.get('/health', (req, res) => {
 
 app.get('/download/apk', (req, res, next) => {
   // check
-  const filePath = path.join(__dirname, 'public', 'BagusGo-V1.3.apk')
-  res.download(filePath, 'BagusGo-V1.3.apk', (err) => {
+  const filePath = path.join(__dirname, 'public', 'BagusGo-v1.3.apk')
+  res.download(filePath, 'BagusGo-v1.3.apk', (err) => {
     if (err) {
       return next(err)
     }
