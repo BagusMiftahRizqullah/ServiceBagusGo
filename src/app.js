@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
 const { authRoutes } = require('./routes/authRoutes')
 const { subscriptionRoutes } = require('./routes/subscriptionRoutes')
 const { routeRoutes } = require('./routes/routeRoutes')
@@ -14,6 +15,15 @@ app.use(express.json({ limit: '1mb' }))
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' })
+})
+
+app.get('/download/apk', (req, res, next) => {
+  const filePath = path.join(__dirname, 'public', 'BagusGo-V1.3.apk')
+  res.download(filePath, 'BagusGo-V1.3.apk', (err) => {
+    if (err) {
+      return next(err)
+    }
+  })
 })
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }))
