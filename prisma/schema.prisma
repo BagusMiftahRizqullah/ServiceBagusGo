@@ -27,5 +27,21 @@ model User {
   created_at              DateTime         @default(now())
   updated_at              DateTime         @updatedAt
 
+  savedAddresses          SavedAddress[]
+
   @@index([phone_number])
+}
+
+model SavedAddress {
+  id         Int      @id @default(autoincrement())
+  address    String
+  lat        Decimal
+  lng        Decimal
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([userId])
+  @@map("saved_addresses")
 }

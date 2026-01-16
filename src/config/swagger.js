@@ -27,11 +27,12 @@ const swaggerDefinition = {
         properties: {
           id: { type: 'string', format: 'uuid' },
           phone_number: { type: 'string', example: '6281234567890' },
+          name: { type: 'string', nullable: true, example: 'Bagus' },
           trial_start_date: { type: 'string', format: 'date-time', nullable: true },
           trial_end_date: { type: 'string', format: 'date-time', nullable: true },
           subscription_type: {
             type: 'string',
-            enum: ['free', 'monthly', 'yearly']
+            enum: ['free', 'daily', 'monthly', 'yearly']
           },
           subscription_start_date: { type: 'string', format: 'date-time', nullable: true },
           subscription_end_date: { type: 'string', format: 'date-time', nullable: true },
@@ -52,6 +53,11 @@ const swaggerDefinition = {
             type: 'string',
             minLength: 6,
             example: 'secret123'
+          },
+          name: {
+            type: 'string',
+            description: 'Nama pengguna (opsional)',
+            example: 'Bagus'
           }
         }
       },
@@ -132,8 +138,57 @@ const swaggerDefinition = {
       ErrorResponse: {
         type: 'object',
         properties: {
+          success: { type: 'boolean', example: false },
           status: { type: 'string', example: 'error' },
-          message: { type: 'string', example: 'Error message' }
+          error: { type: 'string', example: 'Error message' },
+          code: { type: 'integer', example: 400 }
+        }
+      },
+      SavedAddress: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          address: { type: 'string', example: 'Jl. Bagus No. 1, Jakarta' },
+          lat: { type: 'number', example: -6.200000 },
+          lng: { type: 'number', example: 106.816666 },
+          created_at: { type: 'string', format: 'date-time' },
+          updated_at: { type: 'string', format: 'date-time' }
+        }
+      },
+      SavedAddressListResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: {
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/SavedAddress' }
+              },
+              total: { type: 'integer', example: 3 },
+              page: { type: 'integer', example: 1 },
+              perPage: { type: 'integer', example: 10 },
+              totalPages: { type: 'integer', example: 1 }
+            }
+          }
+        }
+      },
+      SavedAddressCreateRequest: {
+        type: 'object',
+        required: ['address', 'lat', 'lng'],
+        properties: {
+          address: { type: 'string', example: 'Jl. Bagus No. 1, Jakarta' },
+          lat: { type: 'number', example: -6.200000 },
+          lng: { type: 'number', example: 106.816666 }
+        }
+      },
+      SavedAddressUpdateRequest: {
+        type: 'object',
+        properties: {
+          address: { type: 'string', example: 'Jl. Bagus No. 2, Jakarta' },
+          lat: { type: 'number', example: -6.210000 },
+          lng: { type: 'number', example: 106.826666 }
         }
       }
     }
@@ -271,17 +326,17 @@ const swaggerDefinition = {
           }
         }
       }
-    },
-    '/api/subscription/subscribe': {
-      post: {
-        tags: ['Subscription'],
-        summary: 'Aktivasi paket subscription (monthly / yearly)',
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/SubscribeRequest' }
+      },
+      '/api/subscription/subscribe': {
+        post: {
+          tags: ['Subscription'],
+          summary: 'Aktivasi paket subscription (daily / monthly)',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SubscribeRequest' }
             }
           }
         },
@@ -304,6 +359,251 @@ const swaggerDefinition = {
           },
           401: {
             description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/addresses': {
+      get: {
+        tags: ['Saved Addresses'],
+        summary: 'Daftar alamat tersimpan milik user yang sedang login',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', minimum: 1, example: 1 },
+            required: false,
+            description: 'Halaman yang ingin diambil (default 1)'
+          },
+          {
+            in: 'query',
+            name: 'per_page',
+            schema: { type: 'integer', minimum: 1, maximum: 100, example: 10 },
+            required: false,
+            description: 'Jumlah item per halaman (default 10, max 100)'
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Daftar alamat tersimpan',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/SavedAddressListResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['Saved Addresses'],
+        summary: 'Membuat alamat tersimpan baru untuk user yang sedang login',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/SavedAddressCreateRequest' }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Alamat berhasil dibuat',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/SavedAddress' },
+                    message: { type: 'string', example: 'Address created' }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Validasi gagal atau limit alamat tercapai',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/addresses/{id}': {
+      get: {
+        tags: ['Saved Addresses'],
+        summary: 'Detail alamat tersimpan milik user yang sedang login',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'ID alamat tersimpan'
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Detail alamat',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/SavedAddress' }
+                  }
+                }
+              }
+            }
+          },
+          401: {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Alamat tidak ditemukan / bukan milik user',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['Saved Addresses'],
+        summary: 'Update alamat tersimpan milik user yang sedang login',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'ID alamat tersimpan'
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/SavedAddressUpdateRequest' }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Alamat berhasil diupdate',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/SavedAddress' },
+                    message: { type: 'string', example: 'Address updated' }
+                  }
+                }
+              }
+            }
+          },
+          400: {
+            description: 'Validasi gagal',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          401: {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Alamat tidak ditemukan / bukan milik user',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        tags: ['Saved Addresses'],
+        summary: 'Hapus alamat tersimpan milik user yang sedang login',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'ID alamat tersimpan'
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Alamat berhasil dihapus',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'null', example: null },
+                    message: { type: 'string', example: 'Address deleted' }
+                  }
+                }
+              }
+            }
+          },
+          401: {
+            description: 'Unauthorized',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' }
+              }
+            }
+          },
+          404: {
+            description: 'Alamat tidak ditemukan / bukan milik user',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -375,4 +675,3 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions)
 
 module.exports = { swaggerSpec }
-
