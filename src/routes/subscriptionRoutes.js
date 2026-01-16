@@ -11,8 +11,8 @@ function validateSubscribeBody(body) {
   if (!body.subscription_type || typeof body.subscription_type !== 'string') {
     return 'subscription_type is required'
   }
-  if (!['monthly', 'yearly'].includes(body.subscription_type)) {
-    return 'subscription_type must be monthly or yearly'
+  if (!['daily', 'monthly'].includes(body.subscription_type)) {
+    return 'subscription_type must be daily or monthly'
   }
   return null
 }
@@ -26,4 +26,3 @@ router.post(
 )
 
 module.exports = { subscriptionRoutes: router }
-

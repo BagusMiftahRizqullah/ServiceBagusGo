@@ -9,6 +9,7 @@ datasource db {
 
 enum SubscriptionType {
   free
+  daily
   monthly
   yearly
 }

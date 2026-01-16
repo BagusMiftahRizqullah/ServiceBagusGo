@@ -2,8 +2,8 @@ const { prisma } = require('../prisma/client')
 const { addDays } = require('../utils/dates')
 
 const PLANS = {
-  monthly: { durationDays: 30, priceIdr: 99000 },
-  yearly: { durationDays: 365, priceIdr: 1200000 }
+  daily: { durationDays: 1, priceIdr: 18000 },
+  monthly: { durationDays: 30, priceIdr: 50000 }
 }
 
 async function subscribe(userId, subscription_type) {
@@ -64,4 +64,3 @@ async function getMe(userId) {
 }
 
 module.exports = { subscribe, getMe }
-
