@@ -1,4 +1,4 @@
-const { geocodeAddress, distanceMatrix } = require('../utils/googleMaps')
+const { geocodeAddress } = require('../utils/googleMaps')
 
 function haversineDistance(coords1, coords2) {
   function toRad(x) {
@@ -30,42 +30,59 @@ async function optimizeRoute(origin, destinationAddresses) {
     })
   )
 
-  const elements = await distanceMatrix(
-    origin,
-    geocoded.map((d) => d.location)
-  )
-  console.log('Origin:', origin)
-  console.log('Distance Matrix Elements:', elements)
-  console.log('Geocoded:', geocoded)
+  const remaining = geocoded.map((d, index) => ({ index, ...d }))
+  const route = []
+  let current = { lat: origin.lat, lng: origin.lng }
+  let totalDistanceKm = 0
 
-  const enriched = geocoded.map((d, idx) => {
-    const el = elements[idx]
-    if (!el || el.status !== 'OK') {
-      return {
-        address: d.inputAddress,
-        distance_km: null,
-        duration: null,
-        _sortDistance: Number.POSITIVE_INFINITY
+  while (remaining.length > 0) {
+    let bestIdx = 0
+    let bestDist = Number.POSITIVE_INFINITY
+
+    for (let i = 0; i < remaining.length; i += 1) {
+      const candidate = remaining[i]
+      const d = haversineDistance(current, candidate.location)
+      if (d < bestDist) {
+        bestDist = d
+        bestIdx = i
       }
     }
 
-    const meters = el.distance && typeof el.distance.value === 'number' ? el.distance.value : null
-    const km = meters === null ? null : Number((meters / 1000).toFixed(1))
-    const duration = el.duration && el.duration.text ? el.duration.text : null
+    const next = remaining.splice(bestIdx, 1)[0]
+    totalDistanceKm += bestDist
 
+    const distanceFromPreviousKm = Number(bestDist.toFixed(2))
+    const cumulativeDistanceKm = Number(totalDistanceKm.toFixed(2))
+
+    route.push({
+      order: route.length + 1,
+      address: next.inputAddress,
+      formatted_address: next.formattedAddress,
+      lat: next.location.lat,
+      lng: next.location.lng,
+      distance_from_previous_km: distanceFromPreviousKm,
+      cumulative_distance_km: cumulativeDistanceKm
+    })
+
+    current = next.location
+  }
+
+  const averageSpeedKmH = 30
+  const result = route.map((stop) => {
+    const legMinutes = stop.distance_from_previous_km === 0
+      ? 0
+      : Math.round((stop.distance_from_previous_km / averageSpeedKmH) * 60)
 
     return {
-      address: d.inputAddress,
-      distance_km: km,
-      duration,
-      _sortDistance: meters === null ? Number.POSITIVE_INFINITY : meters
+      address: stop.address,
+      distance_km: stop.distance_from_previous_km,
+      duration: `${legMinutes} mins`,
+      order: stop.order,
+      cumulative_distance_km: stop.cumulative_distance_km
     }
   })
-  console.log('Enriched:', enriched)
 
-  enriched.sort((a, b) => a._sortDistance - b._sortDistance)
-  return enriched.map(({ _sortDistance, ...rest }) => rest)
+  return result
 }
 
 module.exports = { optimizeRoute }
-
